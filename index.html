@@ -70,17 +70,29 @@
     </section>
 
     <section id="contact" class="section">
-        <h2>Emergency Assistance</h2>
-        <p>Keep emergency contacts ready during your journey.</p>
-        <button class="sos" onclick="emergencyAlert()">
-            SOS EMERGENCY
+        
+<section id="emergency">
+    <h2>🆘 Emergency Assistance</h2>
+    <p>Keep emergency contacts ready during your journey.</p>
+
+    <div class="location-box">
+        <h3>📍 Live Location</h3>
+        <p id="locationStatus">Location not detected.</p>
+
+        <button onclick="getLiveLocation()">
+            GET MY LOCATION
         </button>
-    </section>
 
-    <footer>
-        <p>© 2026 SafeHer | Travel Smart. Travel Safe.</p>
-    </footer>
+        <a id="mapLink" href="#" target="_blank" style="display:none;">
+            View on Google Maps
+        </a>
+    </div>
 
-    <script src="script.js"></script>
-</body>
-</html>
+    <div class="sos-box">
+        <h3>🚨 Emergency Contacts</h3>
+
+        <a class="sos" href="tel:112">CALL 112 – Emergency</a>
+        <a class="sos" href="tel:181">CALL 181 – Women Helpline</a>
+        <a class="sos" href="tel:1091">CALL 1091 – Women Police</a>
+    </div>
+</section>
