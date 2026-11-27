@@ -201,6 +201,65 @@ footer {
     .hero h1 {
         font-size: 32px;
     }
+    
+/* SAFEHER EMERGENCY ASSISTANCE */
+
+#emergency {
+    text-align: center;
+    padding: 40px 20px;
+}
+
+#emergency h2 {
+    color: #e63946;
+    font-size: 30px;
+}
+
+.location-box,
+.sos-box {
+    max-width: 550px;
+    margin: 25px auto;
+    padding: 25px;
+    border-radius: 15px;
+    background: #f5f5f5;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.location-box h3,
+.sos-box h3 {
+    color: #173b57;
+}
+
+.location-box button {
+    background: #087f8c;
+    color: white;
+    padding: 13px 25px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.sos-box .sos {
+    display: block;
+    max-width: 280px;
+    margin: 15px auto;
+    padding: 13px;
+    background: #e63946;
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: bold;
+}
+
+.sos-box .sos:hover {
+    background: #b71c1c;
+}
+
+#mapLink {
+    display: block;
+    margin-top: 15px;
+    color: #087f8c;
+}
+
 
     .cards {
         grid-template-columns: 1fr;
