@@ -1,460 +1,253 @@
 
-// SAFEHER SMART TRAVEL PLANNER
+const map = L.map("map").setView([11.0168, 76.9558], 9);
 
-let map;
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
+
 let routeLayer;
-let facilityLayer;
-let routeFacilities = [];
-let selectedFilter = "all";
+let markers = [];
 
-// Initialize map
-function initializeMap() {
-    if (map) return;
+const form = document.getElementById("routeForm");
+const statusText = document.getElementById("status");
+const results = document.getElementById("results");
 
-    map = L.map("map").setView([11.0168, 76.9558], 7);
-
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '&copy; OpenStreetMap contributors',
-        maxZoom: 19
-    }).addTo(map);
-
-    routeLayer = L.layerGroup().addTo(map);
-    facilityLayer = L.layerGroup().addTo(map);
-}
-
-initializeMap();
-
-// Convert location name into coordinates
-async function getCoordinates(place) {
-    const coordinateMatch = place.trim().match(
-        /^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)$/
-    );
-
-    if (coordinateMatch) {
-        return {
-            lat: Number(coordinateMatch[1]),
-            lon: Number(coordinateMatch[2]),
-            name: "Current location"
-        };
-    }
-
-    const url =
-        "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&country=India&q=" +
-        encodeURIComponent(place);
+async function getLocation(place) {
+    const url = "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q="
+        + encodeURIComponent(place);
 
     const response = await fetch(url);
 
     if (!response.ok) {
-        throw new Error("Location search is unavailable.");
+        throw new Error("Location search failed.");
     }
 
-    const results = await response.json();
+    const data = await response.json();
 
-    if (!results.length) {
-        throw new Error("Location not found in India. Check the spelling.");
+    if (!data.length) {
+        throw new Error("Location not found: " + place);
     }
 
     return {
-        lat: Number(results[0].lat),
-        lon: Number(results[0].lon),
-        name: results[0].display_name
+        lat: Number(data[0].lat),
+        lon: Number(data[0].lon),
+        name: data[0].display_name
     };
 }
 
-// Get current GPS location
-function useCurrentLocation() {
-    const status = document.getElementById("routeStatus");
+function clearMarkers() {
+    markers.forEach(marker => map.removeLayer(marker));
+    markers = [];
 
-    if (!navigator.geolocation) {
-        status.textContent = "Your browser does not support location.";
-        return;
+    if (routeLayer) {
+        map.removeLayer(routeLayer);
     }
-
-    status.textContent = "Getting your current location...";
-
-    navigator.geolocation.getCurrentPosition(
-        function(position) {
-            const lat = position.coords.latitude;
-            const lon = position.coords.longitude;
-
-            document.getElementById("startLocation").value =
-                lat + ", " + lon;
-
-            status.textContent =
-                "Current location added. Enter your destination.";
-        },
-        function() {
-            status.textContent =
-                "Location unavailable. Please allow browser permission.";
-        }
-    );
 }
 
-// Find road route
-async function findSafeRoute() {
-    const start = document.getElementById("startLocation").value.trim();
-    const end = document.getElementById("endLocation").value.trim();
-    const status = document.getElementById("routeStatus");
-    const facilityStatus = document.getElementById("facilityStatus");
+function sampleRoute(coords) {
+    const count = Math.min(8, Math.max(2, Math.ceil(coords.length / 100)));
+    const points = [];
 
-    if (!start || !end) {
-        status.textContent =
-            "Please enter both starting location and destination.";
-        return;
+    for (let i = 0; i < count; i++) {
+        const index = Math.round(
+            i * (coords.length - 1) / (count - 1)
+        );
+        points.push(coords[index]);
     }
 
-    status.textContent = "Searching locations and calculating route...";
-    facilityStatus.textContent = "Waiting for route calculation...";
-    document.getElementById("facilityList").innerHTML = "";
+    return points;
+}
+
+async function findNearbyPlaces(coords) {
+    const samples = sampleRoute(coords);
+
+    const categories = [
+        ['amenity', 'hospital'],
+        ['amenity', 'police'],
+        ['amenity', 'restaurant'],
+        ['amenity', 'cafe'],
+        ['amenity', 'fuel'],
+        ['shop', 'car_repair']
+    ];
+
+    let queryParts = [];
+
+    samples.forEach(point => {
+        const lat = point[1];
+        const lon = point[0];
+
+        categories.forEach(([key, value]) => {
+            queryParts.push(
+                `node(around:5000,${lat},${lon})["${key}"="${value}"];`
+            );
+            queryParts.push(
+                `way(around:5000,${lat},${lon})["${key}"="${value}"];`
+            );
+            queryParts.push(
+                `relation(around:5000,${lat},${lon})["${key}"="${value}"];`
+            );
+        });
+    });
+
+    const query = `[out:json][timeout:60];(${queryParts.join("")});out center tags;`;
+
+    const response = await fetch(
+        "https://overpass-api.de/api/interpreter",
+        {
+            method: "POST",
+            body: new URLSearchParams({ data: query })
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error("Nearby place service is temporarily unavailable.");
+    }
+
+    const data = await response.json();
+    return data.elements || [];
+}
+
+function getPlaceType(tags) {
+    if (tags.amenity === "hospital") return "Hospital";
+    if (tags.amenity === "police") return "Police Station";
+    if (tags.amenity === "restaurant") return "Restaurant";
+    if (tags.amenity === "cafe") return "Cafe / Rest Stop";
+    if (tags.amenity === "fuel") return "Fuel Station";
+    if (tags.shop === "car_repair") return "Vehicle Service";
+    return "Other";
+}
+
+function showPlaces(places) {
+    results.innerHTML = "";
+
+    const seen = new Set();
+    let count = 0;
+
+    places.forEach(place => {
+        const tags = place.tags || {};
+        const lat = place.lat ?? place.center?.lat;
+        const lon = place.lon ?? place.center?.lon;
+
+        if (lat == null || lon == null) return;
+
+        const key = place.type + "-" + place.id;
+        if (seen.has(key)) return;
+        seen.add(key);
+
+        const name = tags.name || "Name not available";
+        const type = getPlaceType(tags);
+
+        const card = document.createElement("div");
+        card.className = "place-card";
+
+        const heading = document.createElement("h3");
+        heading.textContent = name;
+
+        const category = document.createElement("p");
+        category.textContent = "Category: " + type;
+
+        const address = document.createElement("p");
+        address.textContent = tags["addr:city"] || "Address not listed";
+
+        const link = document.createElement("a");
+        link.href = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=17/${lat}/${lon}`;
+        link.target = "_blank";
+        link.rel = "noopener";
+        link.textContent = "View Location";
+
+        card.append(heading, category, address, link);
+        results.appendChild(card);
+
+        const marker = L.marker([lat, lon])
+            .addTo(map)
+            .bindPopup(`<b>${name.replace(/[&<>"']/g, "")}</b><br>${type}`);
+
+        markers.push(marker);
+        count++;
+    });
+
+    if (count === 0) {
+        results.textContent =
+            "No mapped facilities were found along this route. Try another route or check again later.";
+    }
+}
+
+form.addEventListener("submit", async function(event) {
+    event.preventDefault();
+
+    const origin = document.getElementById("origin").value.trim();
+    const destination = document.getElementById("destination").value.trim();
+    const button = document.getElementById("searchBtn");
+
+    if (!origin || !destination) return;
+
+    button.disabled = true;
+    button.textContent = "Searching...";
+    statusText.textContent = "Finding locations and calculating your route...";
+    results.textContent = "Loading nearby places...";
 
     try {
-        const startPoint = await getCoordinates(start);
-        const endPoint = await getCoordinates(end);
+        const start = await getLocation(origin);
+        const end = await getLocation(destination);
 
         const routeURL =
-            `https://router.project-osrm.org/route/v1/driving/` +
-            `${startPoint.lon},${startPoint.lat};` +
-            `${endPoint.lon},${endPoint.lat}` +
-            `?overview=full&geometries=geojson`;
+            `https://router.project-osrm.org/route/v1/driving/${start.lon},${start.lat};${end.lon},${end.lat}?overview=full&geometries=geojson`;
 
-        const response = await fetch(routeURL);
+        const routeResponse = await fetch(routeURL);
 
-        if (!response.ok) {
+        if (!routeResponse.ok) {
             throw new Error("Route service is unavailable.");
         }
 
-        const data = await response.json();
+        const routeData = await routeResponse.json();
 
-        if (!data.routes || !data.routes.length) {
+        if (!routeData.routes || !routeData.routes.length) {
             throw new Error("No driving route found.");
         }
 
-        const route = data.routes[0];
-        const coordinates = route.geometry.coordinates;
+        const route = routeData.routes[0];
+        const coords = route.geometry.coordinates;
 
-        routeLayer.clearLayers();
-        facilityLayer.clearLayers();
+        clearMarkers();
 
-        const routePoints = coordinates.map(point => [
-            point[1], point[0]
-        ]);
-
-        const line = L.polyline(routePoints, {
-            color: "#087f8c",
-            weight: 6
-        }).addTo(routeLayer);
-
-        L.marker([startPoint.lat, startPoint.lon])
-            .bindPopup("Starting Location")
-            .addTo(routeLayer);
-
-        L.marker([endPoint.lat, endPoint.lon])
-            .bindPopup("Destination")
-            .addTo(routeLayer);
-
-        map.fitBounds(line.getBounds(), {padding: [30, 30]});
-
-        const distance = (route.distance / 1000).toFixed(1);
-        const duration = Math.round(route.duration / 60);
-
-        status.textContent =
-            `Route found! Distance: ${distance} km | Estimated driving time: ${duration} minutes.`;
-
-        facilityStatus.textContent =
-            "Searching for facilities along your route...";
-
-        await searchFacilities(coordinates);
-
-    } catch (error) {
-        status.textContent = error.message;
-        facilityStatus.textContent =
-            "Facilities cannot be searched until a route is found.";
-    }
-}
-
-// Calculate distance between two GPS points
-function distanceBetween(a, b) {
-    const rad = value => value * Math.PI / 180;
-    const R = 6371000;
-
-    const dLat = rad(b[0] - a[0]);
-    const dLon = rad(b[1] - a[1]);
-
-    const lat1 = rad(a[0]);
-    const lat2 = rad(b[0]);
-
-    const x =
-        Math.sin(dLat / 2) ** 2 +
-        Math.cos(lat1) * Math.cos(lat2) *
-        Math.sin(dLon / 2) ** 2;
-
-    return 2 * R * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
-}
-
-// Find nearby facilities along the route
-async function searchFacilities(coordinates) {
-    const status = document.getElementById("facilityStatus");
-
-    try {
-        // Select route points approximately every 15 km
-        const samples = [];
-        let lastPoint = null;
-
-        for (let i = 0; i < coordinates.length; i++) {
-            const point = [coordinates[i][1], coordinates[i][0]];
-
-            if (
-                !lastPoint ||
-                distanceBetween(lastPoint, point) >= 15000 ||
-                i === coordinates.length - 1
-            ) {
-                samples.push(point);
-                lastPoint = point;
-            }
-        }
-
-        // Limit requests on very long journeys
-        const limitedSamples = samples.filter((point, index) =>
-            index % Math.max(1, Math.ceil(samples.length / 80)) === 0
-        );
-
-        const aroundQueries = limitedSamples.map(point => {
-            const lat = point[0];
-            const lon = point[1];
-
-            return `
-                nwr(around:2000,${lat},${lon})["amenity"~"restaurant|cafe|fast_food|hospital|clinic|police|toilets|fuel"];
-                nwr(around:2000,${lat},${lon})["shop"~"car_repair|tyres|motorcycle|car"];
-                nwr(around:2000,${lat},${lon})["craft"="mechanic"];
-                nwr(around:2000,${lat},${lon})["tourism"~"hotel|motel|guest_house"];
-            `;
-        }).join("");
-
-        const query = `
-            [out:json][timeout:60];
-            (
-                ${aroundQueries}
-            );
-            out center tags;
-        `;
-
-        const response = await fetch(
-            "https://overpass-api.de/api/interpreter",
-            {
-                method: "POST",
-                body: query
-            }
-        );
-
-        if (!response.ok) {
-            throw new Error("Facility search service is busy. Try again later.");
-        }
-
-        const data = await response.json();
-
-        const routePoints = coordinates
-            .filter((point, index) => index % 5 === 0)
-            .map(point => [point[1], point[0]]);
-
-        const unique = new Map();
-
-        data.elements.forEach(element => {
-            const lat = element.lat ?? element.center?.lat;
-            const lon = element.lon ?? element.center?.lon;
-
-            if (lat == null || lon == null) return;
-
-            const tags = element.tags || {};
-
-            const nearRoute = routePoints.some(point =>
-                distanceBetween(point, [lat, lon]) <= 2200
-            );
-
-            if (!nearRoute) return;
-
-            const item = classifyFacility(tags);
-            if (!item) return;
-
-            const id = `${element.type}-${element.id}`;
-
-            unique.set(id, {
-                id,
-                name: tags.name || item.name,
-                category: item.category,
-                type: item.type,
-                lat,
-                lon,
-                address: [
-                    tags["addr:street"],
-                    tags["addr:city"]
-                ].filter(Boolean).join(", "),
-                opening: tags.opening_hours || "Hours not listed",
-                phone: tags.phone || tags["contact:phone"] || "",
-                tags
-            });
-        });
-
-        routeFacilities = Array.from(unique.values());
-
-        facilityLayer.clearLayers();
-
-        routeFacilities.forEach(place => {
-            L.circleMarker([place.lat, place.lon], {
-                radius: 7,
+        routeLayer = L.geoJSON(route.geometry, {
+            style: {
                 color: "#087f8c",
-                fillColor: "#12a6a1",
-                fillOpacity: 0.9
-            })
-            .bindPopup(
-                `<b>${escapeHTML(place.name)}</b><br>` +
-                `${escapeHTML(place.category)}`
-            )
-            .addTo(facilityLayer);
-        });
+                weight: 5
+            }
+        }).addTo(map);
 
-        filterFacilities(selectedFilter);
+        L.marker([start.lat, start.lon])
+            .addTo(map)
+            .bindPopup("Starting Location")
+            .openPopup();
 
-        status.textContent =
-            `${routeFacilities.length} mapped facilities found near the route.`;
+        L.marker([end.lat, end.lon])
+            .addTo(map)
+            .bindPopup("Destination");
+
+        map.fitBounds(routeLayer.getBounds(), { padding: [25, 25] });
+
+        document.getElementById("distance").textContent =
+            "Distance: " + (route.distance / 1000).toFixed(1) + " km";
+
+        document.getElementById("duration").textContent =
+            "Estimated Time: " + (route.duration / 3600).toFixed(1) + " hours";
+
+        statusText.textContent = "Route found! Searching for nearby facilities...";
+
+        const places = await findNearbyPlaces(coords);
+        showPlaces(places);
+
+        statusText.textContent =
+            "Journey route and nearby facilities loaded successfully.";
 
     } catch (error) {
-        status.textContent =
-            error.message + " You can still use the road map.";
+        statusText.textContent = error.message;
+        results.textContent =
+            "Unable to load all journey information. Please try again later.";
+    } finally {
+        button.disabled = false;
+        button.textContent = "Find My Route";
     }
-}
-
-// Identify facility type from OpenStreetMap tags
-function classifyFacility(tags) {
-    const amenity = tags.amenity;
-    const shop = tags.shop;
-    const tourism = tags.tourism;
-    const craft = tags.craft;
-
-    if (amenity === "restaurant" || amenity === "cafe" ||
-        amenity === "fast_food") {
-        return {category: "Restaurant / Food", type: "restaurant"};
-    }
-
-    if (amenity === "hospital" || amenity === "clinic") {
-        return {category: "Medical Facility", type: "hospital"};
-    }
-
-    if (amenity === "police") {
-        return {category: "Police Station", type: "police"};
-    }
-
-    if (amenity === "toilets") {
-        return {category: "Public Restroom", type: "toilets"};
-    }
-
-    if (shop === "car_repair" || shop === "tyres" ||
-        shop === "motorcycle" || craft === "mechanic") {
-        return {category: "Vehicle Service", type: "mechanic"};
-    }
-
-    if (amenity === "fuel") {
-        return {category: "Fuel Station", type: "reststop"};
-    }
-
-    if (tourism === "hotel" || tourism === "motel" ||
-        tourism === "guest_house") {
-        return {category: "Accommodation", type: "reststop"};
-    }
-
-    return null;
-}
-
-// Filter the displayed facilities
-function filterFacilities(type) {
-    selectedFilter = type;
-
-    const list = document.getElementById("facilityList");
-    const filtered = type === "all"
-        ? routeFacilities
-        : routeFacilities.filter(place => place.type === type);
-
-    list.innerHTML = "";
-
-    if (!filtered.length) {
-        list.innerHTML =
-            "<p>No mapped facilities found in this category along the searched route.</p>";
-        return;
-    }
-
-    filtered.forEach(place => {
-        const card = document.createElement("div");
-        card.className = "facility-card";
-
-        const name = document.createElement("h3");
-        name.textContent = place.name;
-
-        const category = document.createElement("p");
-        category.textContent = place.category;
-
-        const hours = document.createElement("p");
-        hours.textContent = "Opening hours: " + place.opening;
-
-        const address = document.createElement("p");
-        address.textContent = place.address || "Address not listed";
-
-        const mapLink = document.createElement("a");
-        mapLink.href =
-            `https://www.google.com/maps/search/?api=1&query=${place.lat},${place.lon}`;
-        mapLink.target = "_blank";
-        mapLink.rel = "noopener";
-        mapLink.textContent = "View on Google Maps";
-
-        card.append(name, category, hours, address, mapLink);
-
-        if (place.phone) {
-            const phone = document.createElement("p");
-            phone.textContent = "Phone: " + place.phone;
-            card.appendChild(phone);
-        }
-
-        list.appendChild(card);
-    });
-}
-
-// Get live location for emergency map
-function getLiveLocation() {
-    const status = document.getElementById("locationStatus");
-    const mapLink = document.getElementById("mapLink");
-
-    if (!navigator.geolocation) {
-        status.textContent = "Location is not supported by this browser.";
-        return;
-    }
-
-    status.textContent = "Getting your location...";
-
-    navigator.geolocation.getCurrentPosition(
-        function(position) {
-            const lat = position.coords.latitude;
-            const lon = position.coords.longitude;
-
-            status.textContent = "Your location has been detected.";
-
-            mapLink.href =
-                `https://www.google.com/maps?q=${lat},${lon}`;
-
-            mapLink.style.display = "inline-block";
-        },
-        function() {
-            status.textContent =
-                "Location unavailable. Please allow location permission.";
-        }
-    );
-}
-
-// Keep names safe when used in map popup HTML
-function escapeHTML(value) {
-    return String(value).replace(/[&<>"']/g, character => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#039;"
-    })[character]);
-}
-
+});
