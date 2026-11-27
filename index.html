@@ -1,256 +1,85 @@
 
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeHer | Women Travel Safety</title>
 
-html {
-    scroll-behavior: smooth;
-}
+    <link rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
-body {
-    font-family: Arial, sans-serif;
-    background: #f4f8fb;
-    color: #183247;
-    line-height: 1.6;
-}
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
 
-header {
-    background: linear-gradient(135deg, #102d46, #087f8c);
-    color: white;
-}
+<header>
+    <h1>SAFEHER</h1>
+    <p>Smart Women Travel Safety & Assistance</p>
+</header>
 
-.navbar {
-    padding: 20px 7%;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 15px;
-}
+<section class="hero">
+    <h2>Your Journey, Your Safety</h2>
+    <p>Explore your route and find essential services along the way.</p>
+</section>
 
-.navbar h1 {
-    font-size: 28px;
-}
+<main>
+    <section class="planner">
+        <h2>Plan Your Safe Journey</h2>
 
-.navbar a {
-    color: white;
-    text-decoration: none;
-    margin-left: 20px;
-    font-weight: bold;
-}
+        <form id="routeForm">
+            <label for="origin">Starting Location</label>
+            <input type="text" id="origin"
+                placeholder="Example: Coimbatore" required>
 
-.hero {
-    text-align: center;
-    padding: 85px 20px;
-}
+            <label for="destination">Destination</label>
+            <input type="text" id="destination"
+                placeholder="Example: Erode" required>
 
-.hero h2 {
-    font-size: clamp(30px, 5vw, 48px);
-    margin-bottom: 15px;
-}
+            <button type="submit" id="searchBtn">
+                Find My Route
+            </button>
+        </form>
 
-.hero p {
-    max-width: 650px;
-    margin: 0 auto 25px;
-    color: #e3f3f6;
-}
+        <p id="status">Enter your journey details to begin.</p>
+    </section>
 
-.section {
-    padding: 65px 7%;
-    text-align: center;
-}
+    <section class="route-info">
+        <h2>Journey Information</h2>
+        <p id="distance">Distance: --</p>
+        <p id="duration">Estimated Time: --</p>
+    </section>
 
-.section h2 {
-    font-size: 30px;
-    margin-bottom: 12px;
-    color: #123b55;
-}
+    <section>
+        <h2>Journey Map</h2>
+        <div id="map"></div>
+    </section>
 
-.section > p {
-    margin-bottom: 25px;
-    color: #607789;
-}
+    <section class="places">
+        <h2>Places Along Your Route</h2>
+        <p>Explore nearby facilities around your journey.</p>
 
-.planner-card,
-.emergency-card {
-    background: white;
-    max-width: 650px;
-    margin: 25px auto;
-    padding: 28px;
-    border-radius: 16px;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
-    text-align: left;
-}
+        <div id="results">
+            <p>Search a route to discover nearby places.</p>
+        </div>
+    </section>
 
-label {
-    display: block;
-    font-weight: bold;
-    margin: 15px 0 7px;
-}
+    <section class="emergency">
+        <h2>Emergency Assistance</h2>
+        <p>Keep emergency contacts accessible during your journey.</p>
 
-input {
-    width: 100%;
-    padding: 14px;
-    border: 1px solid #cbd8e1;
-    border-radius: 8px;
-    font-size: 16px;
-}
+        <a href="tel:112" class="sos">Call Emergency 112</a>
+        <a href="tel:181" class="helpline">Women Helpline 181</a>
+    </section>
+</main>
 
-button,
-.main-btn,
-.secondary-btn {
-    display: inline-block;
-    border: none;
-    padding: 13px 20px;
-    margin: 10px 5px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: bold;
-    text-decoration: none;
-    font-size: 14px;
-}
+<footer>
+    <p>SAFEHER © 2026 | Travel Smart. Travel Safe.</p>
+</footer>
 
-.main-btn {
-    background: #087f8c;
-    color: white;
-}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="script.js"></script>
 
-.secondary-btn {
-    background: #e3f1f3;
-    color: #075d69;
-}
-
-button:hover,
-.main-btn:hover,
-.secondary-btn:hover {
-    opacity: 0.85;
-}
-
-.planner-card .main-btn {
-    width: 100%;
-    margin: 20px 0 5px;
-}
-
-#routeStatus,
-#facilityStatus {
-    margin-top: 15px;
-    font-size: 14px;
-}
-
-#map {
-    height: 430px;
-    width: 100%;
-    margin-top: 30px;
-    border-radius: 15px;
-    z-index: 1;
-}
-
-.facility-buttons {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 8px;
-    margin: 25px 0;
-}
-
-.facility-buttons button {
-    background: #e2eff2;
-    color: #123b55;
-}
-
-.facility-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-    gap: 18px;
-    text-align: left;
-    margin-top: 25px;
-}
-
-.facility-card {
-    background: white;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.06);
-}
-
-.facility-card h3 {
-    color: #087f8c;
-    margin-bottom: 10px;
-}
-
-.facility-card p {
-    margin: 7px 0;
-    font-size: 14px;
-}
-
-.facility-card a,
-#mapLink {
-    display: inline-block;
-    margin-top: 10px;
-    color: #087f8c;
-    font-weight: bold;
-}
-
-.emergency-section {
-    background: #eaf2f6;
-}
-
-.emergency-card {
-    text-align: center;
-}
-
-.emergency-card h3 {
-    margin-bottom: 15px;
-}
-
-.sos {
-    display: block;
-    max-width: 330px;
-    margin: 12px auto;
-    padding: 14px;
-    background: #d92d43;
-    color: white;
-    border-radius: 8px;
-    text-decoration: none;
-    font-weight: bold;
-}
-
-.small-note {
-    font-size: 12px;
-}
-
-footer {
-    background: #102d46;
-    color: white;
-    text-align: center;
-    padding: 30px;
-}
-
-@media (max-width: 650px) {
-    .navbar {
-        justify-content: center;
-    }
-
-    .navbar a {
-        margin: 5px 8px;
-    }
-
-    .hero {
-        padding: 60px 18px;
-    }
-
-    .section {
-        padding: 45px 5%;
-    }
-
-    #map {
-        height: 350px;
-    }
-
-    .planner-card {
-        padding: 20px;
-    }
-}
+</body>
+</html>
 
