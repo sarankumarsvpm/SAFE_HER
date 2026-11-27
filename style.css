@@ -3,265 +3,254 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: 'Segoe UI', sans-serif;
+}
+
+html {
     scroll-behavior: smooth;
 }
 
 body {
-    background: #0b1020;
+    font-family: Arial, sans-serif;
+    background: #f4f8fb;
+    color: #183247;
+    line-height: 1.6;
+}
+
+header {
+    background: linear-gradient(135deg, #102d46, #087f8c);
     color: white;
 }
 
-/* Navigation */
-
-header {
+.navbar {
+    padding: 20px 7%;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 22px 8%;
-    background: #111a30;
-    position: sticky;
-    top: 0;
-    z-index: 100;
+    flex-wrap: wrap;
+    gap: 15px;
 }
 
-header h2 {
-    color: #20d5d2;
+.navbar h1 {
     font-size: 28px;
 }
 
-nav a {
+.navbar a {
     color: white;
     text-decoration: none;
-    margin-left: 25px;
-    transition: 0.3s;
-}
-
-nav a:hover {
-    color: #20d5d2;
-}
-
-/* Hero section */
-
-.hero {
-    min-height: 450px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    padding: 40px 20px;
-    background: linear-gradient(135deg, #18264b, #35205d);
-}
-
-.hero h1 {
-    font-size: 48px;
-    margin-bottom: 20px;
-    color: #20d5d2;
-}
-
-.hero p {
-    font-size: 19px;
-    margin-bottom: 30px;
-    color: #dddded;
-}
-
-.btn {
-    background: #20d5d2;
-    color: #10172a;
-    padding: 14px 30px;
-    border-radius: 30px;
-    text-decoration: none;
+    margin-left: 20px;
     font-weight: bold;
 }
 
-/* Common sections */
+.hero {
+    text-align: center;
+    padding: 85px 20px;
+}
+
+.hero h2 {
+    font-size: clamp(30px, 5vw, 48px);
+    margin-bottom: 15px;
+}
+
+.hero p {
+    max-width: 650px;
+    margin: 0 auto 25px;
+    color: #e3f3f6;
+}
 
 .section {
-    padding: 65px 8%;
+    padding: 65px 7%;
     text-align: center;
 }
 
 .section h2 {
-    font-size: 32px;
-    color: #20d5d2;
-    margin-bottom: 30px;
+    font-size: 30px;
+    margin-bottom: 12px;
+    color: #123b55;
 }
 
-/* Travel planner */
+.section > p {
+    margin-bottom: 25px;
+    color: #607789;
+}
 
-.planner {
+.planner-card,
+.emergency-card {
+    background: white;
     max-width: 650px;
-    margin: auto;
-    background: #17223b;
-    padding: 35px;
-    border-radius: 15px;
-    box-shadow: 0 5px 20px #0005;
+    margin: 25px auto;
+    padding: 28px;
+    border-radius: 16px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    text-align: left;
+}
+
+label {
+    display: block;
+    font-weight: bold;
+    margin: 15px 0 7px;
 }
 
 input {
     width: 100%;
-    padding: 15px;
-    margin: 10px 0;
-    border: 1px solid #35466a;
+    padding: 14px;
+    border: 1px solid #cbd8e1;
     border-radius: 8px;
-    background: #0b1020;
-    color: white;
+    font-size: 16px;
 }
 
-button {
-    background: #20d5d2;
-    color: #10172a;
+button,
+.main-btn,
+.secondary-btn {
+    display: inline-block;
     border: none;
-    padding: 14px 25px;
+    padding: 13px 20px;
+    margin: 10px 5px;
     border-radius: 8px;
     cursor: pointer;
     font-weight: bold;
-    margin-top: 12px;
+    text-decoration: none;
+    font-size: 14px;
 }
 
-button:hover, .btn:hover {
-    background: #8c83ff;
-    color: white;
-}
-
-#result {
-    margin-top: 20px;
-}
-
-/* Safety service cards */
-
-.cards {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 25px;
-}
-
-.card {
-    background: #17223b;
-    padding: 35px 20px;
-    border-radius: 15px;
-    font-size: 35px;
-    transition: 0.3s;
-    border: 1px solid #293c60;
-}
-
-.card h3 {
-    font-size: 21px;
-    margin: 15px 0;
-    color: #20d5d2;
-}
-
-.card p {
-    font-size: 15px;
-    color: #ccccdd;
-}
-
-.card:hover {
-    transform: translateY(-7px);
-    border-color: #20d5d2;
-}
-
-/* Emergency */
-
-.sos {
-    background: #e63946;
-    color: white;
-    padding: 18px 40px;
-    font-size: 18px;
-    border-radius: 30px;
-}
-
-.sos:hover {
-    background: #b51f30;
-}
-
-/* Footer */
-
-footer {
-    background: #111a30;
-    text-align: center;
-    padding: 25px;
-    color: #aaaaaa;
-}
-
-/* Mobile responsive */
-
-@media (max-width: 650px) {
-    header {
-        flex-direction: column;
-        gap: 18px;
-    }
-
-    nav a {
-        margin: 7px;
-        display: inline-block;
-    }
-
-    .hero h1 {
-        font-size: 32px;
-    }
-    
-/* SAFEHER EMERGENCY ASSISTANCE */
-
-#emergency {
-    text-align: center;
-    padding: 40px 20px;
-}
-
-#emergency h2 {
-    color: #e63946;
-    font-size: 30px;
-}
-
-.location-box,
-.sos-box {
-    max-width: 550px;
-    margin: 25px auto;
-    padding: 25px;
-    border-radius: 15px;
-    background: #f5f5f5;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-
-.location-box h3,
-.sos-box h3 {
-    color: #173b57;
-}
-
-.location-box button {
+.main-btn {
     background: #087f8c;
     color: white;
-    padding: 13px 25px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
 }
 
-.sos-box .sos {
-    display: block;
-    max-width: 280px;
-    margin: 15px auto;
-    padding: 13px;
-    background: #e63946;
-    color: white;
-    text-decoration: none;
-    border-radius: 8px;
+.secondary-btn {
+    background: #e3f1f3;
+    color: #075d69;
+}
+
+button:hover,
+.main-btn:hover,
+.secondary-btn:hover {
+    opacity: 0.85;
+}
+
+.planner-card .main-btn {
+    width: 100%;
+    margin: 20px 0 5px;
+}
+
+#routeStatus,
+#facilityStatus {
+    margin-top: 15px;
+    font-size: 14px;
+}
+
+#map {
+    height: 430px;
+    width: 100%;
+    margin-top: 30px;
+    border-radius: 15px;
+    z-index: 1;
+}
+
+.facility-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin: 25px 0;
+}
+
+.facility-buttons button {
+    background: #e2eff2;
+    color: #123b55;
+}
+
+.facility-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 18px;
+    text-align: left;
+    margin-top: 25px;
+}
+
+.facility-card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+}
+
+.facility-card h3 {
+    color: #087f8c;
+    margin-bottom: 10px;
+}
+
+.facility-card p {
+    margin: 7px 0;
+    font-size: 14px;
+}
+
+.facility-card a,
+#mapLink {
+    display: inline-block;
+    margin-top: 10px;
+    color: #087f8c;
     font-weight: bold;
 }
 
-.sos-box .sos:hover {
-    background: #b71c1c;
+.emergency-section {
+    background: #eaf2f6;
 }
 
-#mapLink {
+.emergency-card {
+    text-align: center;
+}
+
+.emergency-card h3 {
+    margin-bottom: 15px;
+}
+
+.sos {
     display: block;
-    margin-top: 15px;
-    color: #087f8c;
+    max-width: 330px;
+    margin: 12px auto;
+    padding: 14px;
+    background: #d92d43;
+    color: white;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: bold;
 }
 
+.small-note {
+    font-size: 12px;
+}
 
-    .cards {
-        grid-template-columns: 1fr;
+footer {
+    background: #102d46;
+    color: white;
+    text-align: center;
+    padding: 30px;
+}
+
+@media (max-width: 650px) {
+    .navbar {
+        justify-content: center;
+    }
+
+    .navbar a {
+        margin: 5px 8px;
+    }
+
+    .hero {
+        padding: 60px 18px;
+    }
+
+    .section {
+        padding: 45px 5%;
+    }
+
+    #map {
+        height: 350px;
+    }
+
+    .planner-card {
+        padding: 20px;
     }
 }
+
