@@ -4,73 +4,127 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SafeHer | Women Travel Safety</title>
+
+    <title>SafeHer | Smart Women Travel Safety</title>
 
     <link rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
-<header>
-    <h1>SAFEHER</h1>
+<header class="header">
+    <div class="logo">SAFEHER</div>
     <p>Smart Women Travel Safety & Assistance</p>
 </header>
 
 <section class="hero">
-    <h2>Your Journey, Your Safety</h2>
-    <p>Explore your route and find essential services along the way.</p>
+    <h1>Your Journey. Your Safety.</h1>
+    <p>Plan smarter journeys with essential facilities along your route.</p>
 </section>
 
-<main>
-    <section class="planner">
-        <h2>Plan Your Safe Journey</h2>
+<main class="container">
+
+    <section class="panel">
+        <h2>Plan Your Journey</h2>
 
         <form id="routeForm">
+
             <label for="origin">Starting Location</label>
-            <input type="text" id="origin"
-                placeholder="Example: Coimbatore" required>
+            <input
+                type="text"
+                id="origin"
+                placeholder="Example: Erode"
+                required
+            >
 
             <label for="destination">Destination</label>
-            <input type="text" id="destination"
-                placeholder="Example: Erode" required>
+            <input
+                type="text"
+                id="destination"
+                placeholder="Example: Coimbatore"
+                required
+            >
 
             <button type="submit" id="searchBtn">
-                Find My Route
+                Find My Safe Route
             </button>
+
         </form>
 
-        <p id="status">Enter your journey details to begin.</p>
+        <p id="status" aria-live="polite">
+            Enter your starting point and destination.
+        </p>
     </section>
 
-    <section class="route-info">
+    <section class="panel">
         <h2>Journey Information</h2>
-        <p id="distance">Distance: --</p>
-        <p id="duration">Estimated Time: --</p>
-    </section>
 
-    <section>
-        <h2>Journey Map</h2>
-        <div id="map"></div>
-    </section>
+        <div class="journey-details">
+            <div>
+                <span>Distance</span>
+                <h3 id="distance">--</h3>
+            </div>
 
-    <section class="places">
-        <h2>Places Along Your Route</h2>
-        <p>Explore nearby facilities around your journey.</p>
-
-        <div id="results">
-            <p>Search a route to discover nearby places.</p>
+            <div>
+                <span>Estimated Time</span>
+                <h3 id="duration">--</h3>
+            </div>
         </div>
     </section>
 
-    <section class="emergency">
-        <h2>Emergency Assistance</h2>
-        <p>Keep emergency contacts accessible during your journey.</p>
-
-        <a href="tel:112" class="sos">Call Emergency 112</a>
-        <a href="tel:181" class="helpline">Women Helpline 181</a>
+    <section class="panel">
+        <h2>Your Journey Map</h2>
+        <div id="map"></div>
     </section>
+
+    <section class="panel">
+        <h2>Places Along Your Route</h2>
+
+        <p class="description">
+            Discover nearby restaurants, hospitals,
+            police stations and vehicle facilities.
+        </p>
+
+        <label for="placeFilter">Select Category</label>
+
+        <select id="placeFilter">
+            <option value="All">All Places</option>
+            <option value="Restaurant">Restaurants</option>
+            <option value="Cafe">Cafes</option>
+            <option value="Hospital">Hospitals</option>
+            <option value="Police Station">Police Stations</option>
+            <option value="Vehicle Service">Mechanic Shops</option>
+            <option value="Fuel Station">Petrol Stations</option>
+        </select>
+
+        <p id="placeCount">No places loaded yet.</p>
+
+        <div id="results">
+            <p>Search your journey to discover nearby places.</p>
+        </div>
+    </section>
+
+    <section class="panel emergency">
+        <h2>Emergency Assistance</h2>
+
+        <p>Emergency contact numbers for assistance in India.</p>
+
+        <a href="tel:112" class="emergency-btn">
+            Call Emergency 112
+        </a>
+
+        <a href="tel:181" class="women-btn">
+            Women Helpline 181
+        </a>
+
+        <p class="small-note">
+            Emergency numbers and availability may vary by service.
+        </p>
+    </section>
+
 </main>
 
 <footer>
@@ -82,4 +136,3 @@
 
 </body>
 </html>
-
