@@ -1,0 +1,86 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeHer - Women Safety Travel Planner</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header>
+        <h2>🛡️ SafeHer</h2>
+        <nav>
+            <a href="#home">Home</a>
+            <a href="#planner">Travel Planner</a>
+            <a href="#services">Safety Services</a>
+            <a href="#contact">Contact</a>
+        </nav>
+    </header>
+
+    <section id="home" class="hero">
+        <h1>Your Journey. Your Safety.</h1>
+        <p>Smart and secure travel planning for every woman.</p>
+        <a href="#planner" class="btn">Plan Your Journey</a>
+    </section>
+
+    <section id="planner" class="section">
+        <h2>Plan Your Safe Journey</h2>
+
+        <div class="planner">
+            <input type="text" id="start"
+                placeholder="Enter starting location">
+
+            <input type="text" id="destination"
+                placeholder="Enter destination">
+
+            <button onclick="planJourney()">
+                Find Safe Route
+            </button>
+
+            <p id="result"></p>
+        </div>
+    </section>
+
+    <section id="services" class="section">
+        <h2>Safety Services</h2>
+
+        <div class="cards">
+            <div class="card">🍽️
+                <h3>Safe Restaurants</h3>
+                <p>Discover nearby restaurants.</p>
+            </div>
+
+            <div class="card">🏥
+                <h3>Nearby Hospitals</h3>
+                <p>Find nearby medical assistance.</p>
+            </div>
+
+            <div class="card">👮
+                <h3>Police Stations</h3>
+                <p>Locate nearby police stations.</p>
+            </div>
+
+            <div class="card">🔧
+                <h3>Vehicle Assistance</h3>
+                <p>Find nearby mechanics.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="contact" class="section">
+        <h2>Emergency Assistance</h2>
+        <p>Keep emergency contacts ready during your journey.</p>
+        <button class="sos" onclick="emergencyAlert()">
+            SOS EMERGENCY
+        </button>
+    </section>
+
+    <footer>
+        <p>© 2026 SafeHer | Travel Smart. Travel Safe.</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
