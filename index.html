@@ -1,138 +1,120 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SafeHer - Women Travel Safety</title>
 
-    <title>SafeHer | Smart Women Travel Safety</title>
-
-    <link rel="stylesheet"
+  <link rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
-    <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-<header class="header">
-    <div class="logo">SAFEHER</div>
-    <p>Smart Women Travel Safety & Assistance</p>
-</header>
+  <header>
+    <h1>SafeHer</h1>
+    <p>Your journey, with safety in mind.</p>
+  </header>
 
-<section class="hero">
-    <h1>Your Journey. Your Safety.</h1>
-    <p>Plan smarter journeys with essential facilities along your route.</p>
-</section>
+  <main>
+    <section class="search-section">
+      <h2>Plan Your Safe Journey</h2>
 
-<main class="container">
+      <form id="routeForm">
+        <label for="start">Starting Location</label>
+        <input
+          type="text"
+          id="start"
+          placeholder="Example: Coimbatore"
+          required>
 
-    <section class="panel">
-        <h2>Plan Your Journey</h2>
+        <label for="destination">Destination</label>
+        <input
+          type="text"
+          id="destination"
+          placeholder="Example: Erode"
+          required>
 
-        <form id="routeForm">
+        <button type="submit" id="searchButton">
+          Find My Route
+        </button>
+      </form>
 
-            <label for="origin">Starting Location</label>
-            <input
-                type="text"
-                id="origin"
-                placeholder="Example: Erode"
-                required
-            >
-
-            <label for="destination">Destination</label>
-            <input
-                type="text"
-                id="destination"
-                placeholder="Example: Coimbatore"
-                required
-            >
-
-            <button type="submit" id="searchBtn">
-                Find My Safe Route
-            </button>
-
-        </form>
-
-        <p id="status" aria-live="polite">
-            Enter your starting point and destination.
-        </p>
+      <p id="status" role="status"></p>
     </section>
 
-    <section class="panel">
-        <h2>Journey Information</h2>
-
-        <div class="journey-details">
-            <div>
-                <span>Distance</span>
-                <h3 id="distance">--</h3>
-            </div>
-
-            <div>
-                <span>Estimated Time</span>
-                <h3 id="duration">--</h3>
-            </div>
+    <section class="journey-section">
+      <h2>Your Journey Details</h2>
+      <div class="journey-details">
+        <div>
+          <span>Distance</span>
+          <strong id="distance">--</strong>
         </div>
-    </section>
 
-    <section class="panel">
-        <h2>Your Journey Map</h2>
-        <div id="map"></div>
-    </section>
-
-    <section class="panel">
-        <h2>Places Along Your Route</h2>
-
-        <p class="description">
-            Discover nearby restaurants, hospitals,
-            police stations and vehicle facilities.
-        </p>
-
-        <label for="placeFilter">Select Category</label>
-
-        <select id="placeFilter">
-            <option value="All">All Places</option>
-            <option value="Restaurant">Restaurants</option>
-            <option value="Cafe">Cafes</option>
-            <option value="Hospital">Hospitals</option>
-            <option value="Police Station">Police Stations</option>
-            <option value="Vehicle Service">Mechanic Shops</option>
-            <option value="Fuel Station">Petrol Stations</option>
-        </select>
-
-        <p id="placeCount">No places loaded yet.</p>
-
-        <div id="results">
-            <p>Search your journey to discover nearby places.</p>
+        <div>
+          <span>Estimated Time</span>
+          <strong id="duration">--</strong>
         </div>
+      </div>
     </section>
 
-    <section class="panel emergency">
-        <h2>Emergency Assistance</h2>
-
-        <p>Emergency contact numbers for assistance in India.</p>
-
-        <a href="tel:112" class="emergency-btn">
-            Call Emergency 112
-        </a>
-
-        <a href="tel:181" class="women-btn">
-            Women Helpline 181
-        </a>
-
-        <p class="small-note">
-            Emergency numbers and availability may vary by service.
-        </p>
+    <section>
+      <h2>Journey Map</h2>
+      <div id="map"></div>
     </section>
 
-</main>
+    <section class="places-section">
+      <h2>Places Along Your Route</h2>
 
-<footer>
-    <p>SAFEHER © 2026 | Travel Smart. Travel Safe.</p>
-</footer>
+      <p class="note">
+        Explore mapped restaurants, cafes, hospitals, police stations
+        and mechanic shops along your journey.
+      </p>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="script.js"></script>
+      <label for="placeFilter">Choose a category</label>
+
+      <select id="placeFilter">
+        <option value="all">All Places</option>
+        <option value="restaurant">Restaurants</option>
+        <option value="cafe">Cafes</option>
+        <option value="hospital">Hospitals</option>
+        <option value="police">Police Stations</option>
+        <option value="mechanic">Mechanic Shops</option>
+      </select>
+
+      <p id="placeCount">No places found yet.</p>
+
+      <div id="placesList">
+        <p>Enter your journey details to find places.</p>
+      </div>
+    </section>
+
+    <section class="emergency-section">
+      <h2>Emergency Assistance</h2>
+      <p>For emergencies in India, contact:</p>
+
+      <a href="tel:112" class="emergency-button">
+        Call 112 - Emergency
+      </a>
+
+      <a href="tel:181" class="emergency-button">
+        Call 181 - Women Helpline
+      </a>
+    </section>
+  </main>
+
+  <footer>
+    <p>SafeHer | Travel with awareness. Travel with care.</p>
+    <p class="note">
+      Place information depends on OpenStreetMap data.
+      Always verify locations and services before travelling.
+    </p>
+  </footer>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="script.js"></script>
 
 </body>
 </html>
