@@ -1,446 +1,457 @@
+// ----------------------------------
+// SAFEHER MAP
+// ----------------------------------
 
-// =====================================
-// SAFEHER - MAIN JAVASCRIPT
-// =====================================
+const map = L.map("map").setView([11.0168, 76.9558], 8);
 
-// 1. INITIALIZE MAP
-
-const map = L.map("map").setView([11.0168, 76.9558], 9);
-
-L.tileLayer(
-    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    {
-        attribution: "&copy; OpenStreetMap contributors"
-    }
-).addTo(map);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  attribution: "&copy; OpenStreetMap contributors"
+}).addTo(map);
 
 let routeLayer = null;
-let routeMarkers = [];
 let placeMarkers = [];
 let allPlaces = [];
 
-const form = document.getElementById("routeForm");
+const routeForm = document.getElementById("routeForm");
 const statusText = document.getElementById("status");
-const results = document.getElementById("results");
-const searchBtn = document.getElementById("searchBtn");
+const placesList = document.getElementById("placesList");
 const placeFilter = document.getElementById("placeFilter");
+const placeCount = document.getElementById("placeCount");
+const searchButton = document.getElementById("searchButton");
 
 
-// 2. SEARCH LOCATION
+// ----------------------------------
+// GET LOCATION COORDINATES
+// ----------------------------------
 
-async function getLocation(place) {
+async function getCoordinates(locationName) {
+  const url =
+    "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=" +
+    encodeURIComponent(locationName);
 
-    const url =
-        "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q="
-        + encodeURIComponent(place);
+  const response = await fetch(url);
 
-    const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error("Location search failed.");
+  }
 
-    if (!response.ok) {
-        throw new Error("Location search service unavailable.");
-    }
+  const data = await response.json();
 
-    const data = await response.json();
+  if (!data.length) {
+    throw new Error("Location not found: " + locationName);
+  }
 
-    if (!data.length) {
-        throw new Error("Location not found: " + place);
-    }
-
-    return {
-        lat: Number(data[0].lat),
-        lon: Number(data[0].lon),
-        name: data[0].display_name
-    };
+  return [
+    Number(data[0].lon),
+    Number(data[0].lat)
+  ];
 }
 
 
-// 3. CLEAR OLD MAP DATA
+// ----------------------------------
+// GET DRIVING ROUTE
+// ----------------------------------
 
-function clearMap() {
+async function getRoute(start, destination) {
+  const url =
+    `https://router.project-osrm.org/route/v1/driving/` +
+    `${start[0]},${start[1]};${destination[0]},${destination[1]}` +
+    "?overview=full&geometries=geojson";
 
-    if (routeLayer) {
-        map.removeLayer(routeLayer);
-        routeLayer = null;
-    }
+  const response = await fetch(url);
 
-    routeMarkers.forEach(marker => map.removeLayer(marker));
-    routeMarkers = [];
+  if (!response.ok) {
+    throw new Error("Route service is unavailable.");
+  }
 
-    placeMarkers.forEach(marker => map.removeLayer(marker));
-    placeMarkers = [];
+  const data = await response.json();
 
-    allPlaces = [];
+  if (data.code !== "Ok" || !data.routes.length) {
+    throw new Error("No driving route found.");
+  }
+
+  return data.routes[0];
 }
 
 
-// 4. SELECT POINTS ALONG ROUTE
+// ----------------------------------
+// GET POINTS ALONG THE ROUTE
+// ----------------------------------
 
-function sampleRoute(coords) {
+function getRouteSamples(coordinates) {
+  const samples = [];
+  const count = Math.min(8, coordinates.length);
 
-    const points = [];
+  for (let i = 0; i < count; i++) {
+    const index = Math.round(
+      i * (coordinates.length - 1) / Math.max(1, count - 1)
+    );
 
-    if (!coords.length) return points;
+    samples.push(coordinates[index]);
+  }
 
-    const count = Math.min(12, coords.length);
-
-    for (let i = 0; i < count; i++) {
-
-        const index = Math.round(
-            i * (coords.length - 1) / (count - 1 || 1)
-        );
-
-        points.push(coords[index]);
-    }
-
-    return points;
+  return samples;
 }
 
 
-// 5. FIND NEARBY PLACES
+// ----------------------------------
+// GET PLACES FROM OPENSTREETMAP
+// ----------------------------------
 
-async function findNearbyPlaces(coords) {
+async function getPlaces(coordinates) {
+  const samples = getRouteSamples(coordinates);
 
-    const samples = sampleRoute(coords);
-    const queryParts = [];
+  const searches = samples.map(([lon, lat]) => {
+    return `
+      nwr(around:3000,${lat},${lon})
+        ["amenity"~"^(restaurant|cafe|hospital|police)$"];
 
-    samples.forEach(point => {
-
-        const lat = point[1];
-        const lon = point[0];
-
-        queryParts.push(`
-            nwr(around:3500,${lat},${lon})
-            ["amenity"~"hospital|police|restaurant|cafe|fuel"];
-
-            nwr(around:3500,${lat},${lon})
-            ["shop"="car_repair"];
-        `);
-    });
-
-    const query = `
-        [out:json][timeout:60];
-        (
-            ${queryParts.join("")}
-        );
-        out center tags;
+      nwr(around:3000,${lat},${lon})
+        ["shop"~"^(car_repair|vehicle|tyres|car_parts)$"];
     `;
+  }).join("\n");
 
-    const servers = [
-        "https://overpass-api.de/api/interpreter",
-        "https://overpass.kumi.systems/api/interpreter"
-    ];
+  const query = `
+    [out:json][timeout:60];
+    (
+      ${searches}
+    );
+    out center tags;
+  `;
 
-    for (const server of servers) {
+  const servers = [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter"
+  ];
 
-        try {
+  for (const server of servers) {
+    try {
+      const response = await fetch(server, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: "data=" + encodeURIComponent(query)
+      });
 
-            const response = await fetch(server, {
-                method: "POST",
-                body: new URLSearchParams({
-                    data: query
-                })
-            });
+      if (!response.ok) {
+        continue;
+      }
 
-            if (!response.ok) continue;
+      const data = await response.json();
+      return data.elements || [];
 
-            const data = await response.json();
-
-            if (Array.isArray(data.elements)) {
-                return data.elements;
-            }
-
-        } catch (error) {
-            console.log("Overpass server unavailable:", error);
-        }
+    } catch (error) {
+      console.log("Trying another map data server...");
     }
+  }
 
-    throw new Error("Nearby places service is temporarily unavailable.");
+  throw new Error("Place search is temporarily unavailable. Please try again.");
 }
 
 
-// 6. IDENTIFY PLACE CATEGORY
+// ----------------------------------
+// IDENTIFY PLACE CATEGORY
+// ----------------------------------
 
 function getPlaceType(tags) {
+  if (tags.amenity === "restaurant") {
+    return "restaurant";
+  }
 
-    if (tags.amenity === "hospital") return "Hospital";
+  if (tags.amenity === "cafe") {
+    return "cafe";
+  }
 
-    if (tags.amenity === "police") return "Police Station";
+  if (tags.amenity === "hospital") {
+    return "hospital";
+  }
 
-    if (tags.amenity === "restaurant") return "Restaurant";
+  if (tags.amenity === "police") {
+    return "police";
+  }
 
-    if (tags.amenity === "cafe") return "Cafe";
+  if (
+    ["car_repair", "vehicle", "tyres", "car_parts"].includes(tags.shop)
+  ) {
+    return "mechanic";
+  }
 
-    if (tags.amenity === "fuel") return "Fuel Station";
-
-    if (tags.shop === "car_repair") return "Vehicle Service";
-
-    return "Other";
+  return null;
 }
 
 
-// 7. DISPLAY PLACES
+// ----------------------------------
+// CATEGORY DISPLAY NAMES
+// ----------------------------------
 
-function showPlaces(places) {
+function getCategoryName(type) {
+  const names = {
+    restaurant: "Restaurant",
+    cafe: "Cafe",
+    hospital: "Hospital",
+    police: "Police Station",
+    mechanic: "Mechanic / Vehicle Shop"
+  };
 
-    const uniquePlaces = new Map();
-
-    places.forEach(place => {
-
-        const tags = place.tags || {};
-        const type = getPlaceType(tags);
-
-        if (type === "Other") return;
-
-        const lat = place.lat ?? place.center?.lat;
-        const lon = place.lon ?? place.center?.lon;
-
-        if (lat == null || lon == null) return;
-
-        const key = `${place.type}-${place.id}`;
-
-        uniquePlaces.set(key, {
-            id: key,
-            name: tags.name || "Name not available",
-            type: type,
-            lat: lat,
-            lon: lon,
-            hours: tags.opening_hours || "Not available",
-            phone: tags.phone ||
-                   tags["contact:phone"] ||
-                   "Not available",
-            address: [
-                tags["addr:street"],
-                tags["addr:city"]
-            ].filter(Boolean).join(", ") || "Not listed"
-        });
-    });
-
-    allPlaces = Array.from(uniquePlaces.values());
-
-    renderPlaces();
+  return names[type] || "Other";
 }
 
 
-// 8. FILTER AND DISPLAY RESULTS
+// ----------------------------------
+// PREPARE PLACE DETAILS
+// ----------------------------------
+
+function preparePlaces(elements) {
+  const uniquePlaces = new Map();
+
+  elements.forEach(element => {
+    const tags = element.tags || {};
+    const type = getPlaceType(tags);
+
+    if (!type) return;
+
+    const latitude = element.lat ?? element.center?.lat;
+    const longitude = element.lon ?? element.center?.lon;
+
+    if (latitude == null || longitude == null) return;
+
+    const name =
+      tags.name ||
+      tags["name:en"] ||
+      tags.brand ||
+      tags.operator ||
+      "Unnamed " + getCategoryName(type);
+
+    const place = {
+      id: `${element.type}-${element.id}`,
+      name: name,
+      type: type,
+      latitude: Number(latitude),
+      longitude: Number(longitude),
+      address: [
+        tags["addr:housenumber"],
+        tags["addr:street"],
+        tags["addr:suburb"],
+        tags["addr:city"]
+      ].filter(Boolean).join(", "),
+      phone: tags.phone || tags["contact:phone"] || "",
+      openingHours: tags.opening_hours || ""
+    };
+
+    uniquePlaces.set(place.id, place);
+  });
+
+  return Array.from(uniquePlaces.values());
+}
+
+
+// ----------------------------------
+// DISPLAY PLACES ON MAP
+// ----------------------------------
+
+function showPlaceMarkers(places) {
+  placeMarkers.forEach(marker => map.removeLayer(marker));
+  placeMarkers = [];
+
+  places.forEach(place => {
+    const marker = L.marker([
+      place.latitude,
+      place.longitude
+    ]).addTo(map);
+
+    marker.bindPopup(`
+      <strong>${escapeHTML(place.name)}</strong><br>
+      ${escapeHTML(getCategoryName(place.type))}
+    `);
+
+    placeMarkers.push(marker);
+  });
+}
+
+
+// ----------------------------------
+// DISPLAY PLACE CARDS
+// ----------------------------------
+
+function escapeHTML(value) {
+  return String(value).replace(/[&<>"']/g, character => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[character]);
+}
 
 function renderPlaces() {
+  const selectedType = placeFilter.value;
 
-    results.innerHTML = "";
+  const filteredPlaces = selectedType === "all"
+    ? allPlaces
+    : allPlaces.filter(place => place.type === selectedType);
 
-    placeMarkers.forEach(marker => map.removeLayer(marker));
-    placeMarkers = [];
+  placesList.innerHTML = "";
 
-    const selected = placeFilter.value;
+  placeCount.textContent =
+    `${filteredPlaces.length} places found`;
 
-    const filtered = allPlaces.filter(place => {
+  if (filteredPlaces.length === 0) {
+    placesList.innerHTML =
+      "<p>No mapped places found in this category along the searched route.</p>";
 
-        return selected === "All" ||
-               place.type === selected;
-    });
+    showPlaceMarkers([]);
+    return;
+  }
 
-    document.getElementById("placeCount").textContent =
-        filtered.length + " mapped places found";
+  filteredPlaces.forEach(place => {
+    const card = document.createElement("div");
+    card.className = "place-card";
 
-    if (filtered.length === 0) {
+    const name = document.createElement("h3");
+    name.textContent = place.name;
 
-        results.textContent =
-            "No mapped places found in this category. Try another category or check again later.";
+    const category = document.createElement("span");
+    category.className = "place-type";
+    category.textContent = getCategoryName(place.type);
 
-        return;
+    card.appendChild(category);
+    card.appendChild(name);
+
+    if (place.address) {
+      const address = document.createElement("p");
+      address.textContent = "Address: " + place.address;
+      card.appendChild(address);
     }
 
-    filtered.forEach(place => {
+    if (place.phone) {
+      const phone = document.createElement("p");
+      phone.textContent = "Phone: " + place.phone;
+      card.appendChild(phone);
+    }
 
-        const card = document.createElement("div");
-        card.className = "place-card";
+    if (place.openingHours) {
+      const hours = document.createElement("p");
+      hours.textContent = "Opening hours: " + place.openingHours;
+      card.appendChild(hours);
+    }
 
-        const heading = document.createElement("h3");
-        heading.textContent = place.name;
+    const mapLink = document.createElement("a");
+    mapLink.href =
+      `https://www.openstreetmap.org/?mlat=${place.latitude}` +
+      `&mlon=${place.longitude}#map=17/${place.latitude}/${place.longitude}`;
 
-        const category = document.createElement("p");
-        category.textContent = "Category: " + place.type;
+    mapLink.target = "_blank";
+    mapLink.rel = "noopener noreferrer";
+    mapLink.textContent = "View on map";
 
-        const address = document.createElement("p");
-        address.textContent = "Address: " + place.address;
+    card.appendChild(mapLink);
+    placesList.appendChild(card);
+  });
 
-        const hours = document.createElement("p");
-        hours.textContent = "Opening hours: " + place.hours;
-
-        const phone = document.createElement("p");
-        phone.textContent = "Phone: " + place.phone;
-
-        const link = document.createElement("a");
-
-        link.href =
-            `https://www.openstreetmap.org/?mlat=${place.lat}&mlon=${place.lon}#map=17/${place.lat}/${place.lon}`;
-
-        link.target = "_blank";
-        link.rel = "noopener";
-        link.textContent = "View Location";
-
-        card.append(
-            heading,
-            category,
-            address,
-            hours,
-            phone,
-            link
-        );
-
-        results.appendChild(card);
-
-        const marker = L.marker([place.lat, place.lon])
-            .addTo(map);
-
-        const popup = document.createElement("div");
-        const popupTitle = document.createElement("strong");
-        popupTitle.textContent = place.name;
-
-        const popupCategory = document.createElement("p");
-        popupCategory.textContent = place.type;
-
-        popup.append(popupTitle, popupCategory);
-        marker.bindPopup(popup);
-
-        placeMarkers.push(marker);
-    });
+  showPlaceMarkers(filteredPlaces);
 }
 
 
-// 9. CATEGORY FILTER EVENT
+// ----------------------------------
+// FILTER CATEGORIES
+// ----------------------------------
 
 placeFilter.addEventListener("change", renderPlaces);
 
 
-// 10. FIND ROUTE AND PLACES
+// ----------------------------------
+// SEARCH AND DISPLAY JOURNEY
+// ----------------------------------
 
-form.addEventListener("submit", async function(event) {
+routeForm.addEventListener("submit", async function(event) {
+  event.preventDefault();
 
-    event.preventDefault();
+  const startName = document.getElementById("start").value.trim();
+  const destinationName =
+    document.getElementById("destination").value.trim();
 
-    const origin =
-        document.getElementById("origin").value.trim();
+  if (!startName || !destinationName) {
+    statusText.textContent = "Please enter both locations.";
+    return;
+  }
 
-    const destination =
-        document.getElementById("destination").value.trim();
+  searchButton.disabled = true;
+  searchButton.textContent = "Searching...";
+  statusText.textContent = "Finding your route...";
 
-    if (!origin || !destination) return;
+  placesList.innerHTML = "<p>Searching for places...</p>";
+  placeCount.textContent = "Searching...";
+  allPlaces = [];
+  showPlaceMarkers([]);
 
-    searchBtn.disabled = true;
-    searchBtn.textContent = "Searching...";
+  document.getElementById("distance").textContent = "--";
+  document.getElementById("duration").textContent = "--";
 
-    statusText.textContent =
-        "Finding your locations and route...";
+  try {
+    // Find starting and destination coordinates
+    const start = await getCoordinates(startName);
+    const destination = await getCoordinates(destinationName);
 
-    results.textContent = "Searching nearby places...";
+    statusText.textContent = "Calculating your driving route...";
 
-    document.getElementById("distance").textContent = "--";
-    document.getElementById("duration").textContent = "--";
-    document.getElementById("placeCount").textContent = "";
+    // Get driving route
+    const route = await getRoute(start, destination);
 
-    clearMap();
-
-    try {
-
-        // Find starting point
-
-        const start = await getLocation(origin);
-
-        // Find destination
-
-        const end = await getLocation(destination);
-
-        // Get driving route
-
-        const routeURL =
-            `https://router.project-osrm.org/route/v1/driving/${start.lon},${start.lat};${end.lon},${end.lat}?overview=full&geometries=geojson`;
-
-        const routeResponse = await fetch(routeURL);
-
-        if (!routeResponse.ok) {
-            throw new Error("Route service unavailable.");
-        }
-
-        const routeData = await routeResponse.json();
-
-        if (!routeData.routes || !routeData.routes.length) {
-            throw new Error("No driving route found.");
-        }
-
-        const route = routeData.routes[0];
-
-        const coords = route.geometry.coordinates;
-
-        // Draw route
-
-        routeLayer = L.geoJSON(route.geometry, {
-            style: {
-                color: "#087f8c",
-                weight: 5
-            }
-        }).addTo(map);
-
-        // Starting marker
-
-        routeMarkers.push(
-            L.marker([start.lat, start.lon])
-                .addTo(map)
-                .bindPopup("Starting Location")
-        );
-
-        // Destination marker
-
-        routeMarkers.push(
-            L.marker([end.lat, end.lon])
-                .addTo(map)
-                .bindPopup("Destination")
-        );
-
-        map.fitBounds(routeLayer.getBounds(), {
-            padding: [30, 30]
-        });
-
-        // Display journey details
-
-        document.getElementById("distance").textContent =
-            (route.distance / 1000).toFixed(1) + " km";
-
-        const totalMinutes = Math.round(route.duration / 60);
-
-        const hours = Math.floor(totalMinutes / 60);
-        const minutes = totalMinutes % 60;
-
-        document.getElementById("duration").textContent =
-            hours + " hr " + minutes + " min";
-
-        // Search places
-
-        statusText.textContent =
-            "Route found! Searching for nearby facilities...";
-
-        const places = await findNearbyPlaces(coords);
-
-        showPlaces(places);
-
-        statusText.textContent =
-            "Route and nearby facilities loaded successfully.";
-
-    } catch (error) {
-
-        statusText.textContent = error.message;
-
-        results.textContent =
-            "Unable to load journey information. Please try again.";
-
-        console.error(error);
-
-    } finally {
-
-        searchBtn.disabled = false;
-        searchBtn.textContent = "Find My Safe Route";
+    // Draw route on map
+    if (routeLayer) {
+      map.removeLayer(routeLayer);
     }
 
+    routeLayer = L.geoJSON(route.geometry, {
+      style: {
+        color: "#087f8c",
+        weight: 5
+      }
+    }).addTo(map);
+
+    map.fitBounds(routeLayer.getBounds(), {
+      padding: [25, 25]
+    });
+
+    // Show distance and time
+    document.getElementById("distance").textContent =
+      (route.distance / 1000).toFixed(1) + " km";
+
+    const totalMinutes = Math.round(route.duration / 60);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    document.getElementById("duration").textContent =
+      hours > 0
+        ? `${hours} hr ${minutes} min`
+        : `${minutes} min`;
+
+    statusText.textContent = "Finding places along your route...";
+
+    // Find nearby mapped places
+    const elements = await getPlaces(route.geometry.coordinates);
+
+    allPlaces = preparePlaces(elements);
+
+    renderPlaces();
+
+    statusText.textContent =
+      "Route and mapped places loaded successfully!";
+
+  } catch (error) {
+    console.error(error);
+
+    statusText.textContent =
+      error.message || "Something went wrong. Please try again.";
+
+    placesList.innerHTML =
+      "<p>Unable to load places. Please try again later.</p>";
+
+    placeCount.textContent = "Places unavailable.";
+
+  } finally {
+    searchButton.disabled = false;
+    searchButton.textContent = "Find My Route";
+  }
 });
-
-
-// END OF SAFEHER JAVASCRIPT
